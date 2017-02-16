@@ -73,7 +73,7 @@ class database(object):
 	def getEmptyRowBySeats(self,requiredSeats):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
-		cmd='Select row,count(seat) as numOfSeats from seating  where name="" group by row  having numOfSeats>(?)'
+		cmd='Select row,count(seat) as numOfSeats from seating  where name="" group by row  having numOfSeats>=(?)'
 		rowsCount=c.execute(cmd,(requiredSeats,))
 		if rowsCount>0:
 			rowNumber=c.fetchone()[0]
@@ -107,8 +107,11 @@ class database(object):
 		c=conn.cursor()
 		cmd='Update seating set name=(?) where row=(?) and seat=(?)'
 		try:
-			rowsCount=c.execute(cmd,(name,row,seat))
+			c.execute(cmd,(name,row,seat))
+			conn.commit()
+			rowsCount=c.rowcount
 			if rowsCount>0:
+
 				print("Seat added successfully")
 				print(row)
 				print(seat)
@@ -159,7 +162,7 @@ class seatAllocator(database):
 		if(numberOfSeats<remainingSeats):
 			
 			#check if passengers can be accomodated in a single row
-			if(numberOfSeats<self.columns):
+			if(numberOfSeats<=self.columns):
 				bookedRow=database.getEmptyRowBySeats(numberOfSeats)
 				if(bookedRow==-1):
 					print("No seats available")
@@ -177,7 +180,7 @@ class seatAllocator(database):
 									count+=1
 									print("Seat booked successfully")
 									print(seat)
-									print(rowNumber)
+									print(bookedRow)
 								else:
 									print("Error in booking of seats")
 
@@ -207,7 +210,7 @@ totalEmptySeats=database.getRemainingSeats()
 print('remaining seats: {}'.format(totalEmptySeats))
 
 
-booking.bookSeats(1,'Ace')
+booking.bookSeats(4,'Flo')
 
 #database.getEmptyRowBySeats(3)
 
