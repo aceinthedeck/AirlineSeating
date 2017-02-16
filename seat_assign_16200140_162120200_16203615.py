@@ -231,7 +231,7 @@ print('remaining seats: {}'.format(totalEmptySeats))
 
 
 
-readCSV=readCSV('bookings1.csv')
+readCSV=readCSV('bookings.csv')
 readCSV.readFile()
 
 for row in readCSV.bookingData:
