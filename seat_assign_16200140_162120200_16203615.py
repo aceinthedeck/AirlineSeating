@@ -90,19 +90,16 @@ class database(object):
 		c=conn.cursor()
 		cmd='Select seat from seating where row=(?) and name=""'
 		try:
-			rowsCount=c.execute(cmd,(requiredSeats,))
-			if rowsCount>0:
-
-				for i in rowsCount:
-					row=c.fetchone()
-					seats.append(row[0])
-			else:
-				seats=[]
+			c.execute(cmd,(row,))
+			for row in c:
+				seat=row[0]
+				seats.append(seat)
+				print(seat)
 			conn.close()
 			return seats
-		except Error as e:
+		except:
 			print("Unable to connect with database")
-			print(e)
+
 
 	#saves the details of the booked seats in the database
 	def addBookedSeatsRecord(self,row,seat,name):
@@ -113,15 +110,17 @@ class database(object):
 			rowsCount=c.execute(cmd,(name,row,seat))
 			if rowsCount>0:
 				print("Seat added successfully")
+				print(row)
+				print(seat)
+				print(name)
 				conn.close()
 				return rowsCount
 			else:
 				print("error in booking")
 				conn.close()
 				return -1
-		except Error as e:
+		except:
 			print("Unable to connect with database")
-			print(e)
 			conn.close()
 
 class seatAllocator(database):
@@ -158,9 +157,7 @@ class seatAllocator(database):
 		seats=[]
 		#check with remaining seats
 		if(numberOfSeats<remainingSeats):
-			#fine go ahead with booking
-			print("you are ok")
-
+			
 			#check if passengers can be accomodated in a single row
 			if(numberOfSeats<self.columns):
 				bookedRow=database.getEmptyRowBySeats(numberOfSeats)
@@ -170,13 +167,19 @@ class seatAllocator(database):
 					print("Seats can be booked in row: {}".format(bookedRow))
 					#get the empty seats in the row
 					seats=database.getEmptySeatsArray(bookedRow)
-
 					#check for if seats are empty
-					if not seats:
+					if seats:
+						count=0
 						for seat in seats:
-							database.addBookedSeatsRecord(bookedRow,seat,name)
-					else:
-						print("Error in booking of seats")
+							if count<numberOfSeats:
+								bookingResult=database.addBookedSeatsRecord(bookedRow,seat,name)
+								if bookingResult==1:
+									count+=1
+									print("Seat booked successfully")
+									print(seat)
+									print(rowNumber)
+								else:
+									print("Error in booking of seats")
 
 			else:
 				print("python indentation sucks")
@@ -186,9 +189,6 @@ class seatAllocator(database):
 			print("Not enough seats available. Remaining seats are {}".format(remainingSeats))
 			self.bookingsRefused+=numberOfSeats
 			print("booking refused till now {}".format(self.bookingsRefused))
-
-
-
 
 dbName='data.db'
 database=database(dbName)
