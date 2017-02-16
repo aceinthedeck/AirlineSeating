@@ -46,6 +46,14 @@ class database(object):
 		return count
 
 
+	def getMaxAvailableSeats(self):
+
+		conn=sqlite3.connect(self.fileName)
+		c=conn.cursor()
+		c.execute('select count(seat)from seating where name="" group by row order by count(seat) desc')
+		maxSeatsInARow=c.fetchone()[0]
+		print("Maximum available seats {}".format(maxSeatsInARow))
+		return maxSeatsInARow
 
 	#returns the remaining seats
 
@@ -77,7 +85,6 @@ class database(object):
 		rowsCount=c.execute(cmd,(requiredSeats,))
 		if rowsCount>0:
 			rowNumber=c.fetchone()[0]
-			print(rowNumber)
 		else:
 			rowNumber=-1
 		conn.close()
@@ -94,7 +101,6 @@ class database(object):
 			for row in c:
 				seat=row[0]
 				seats.append(seat)
-				print(seat)
 			conn.close()
 			return seats
 		except:
@@ -111,7 +117,6 @@ class database(object):
 			conn.commit()
 			rowsCount=c.rowcount
 			if rowsCount>0:
-				print("Seat added successfully")
 				conn.close()
 				return rowsCount
 			else:
@@ -129,6 +134,7 @@ class seatAllocator(database):
 		self.rows=rows
 		self.columns=columns
 		self.seatsAvailable=self.maxSeats
+		self.maxSeatsInARow=columns
 		self.seatsBooked=0
 		self.bookingsRefused=0
 		self.awayPassengers=0
@@ -151,7 +157,6 @@ class seatAllocator(database):
 
 
 	def bookSeatsInARow(self,row,numberOfSeats,name):
-		print("Attempting to book {} seats in {} on name of {}".format(numberOfSeats,row,name))
 		seats=database.getEmptySeatsArray(row)
 		if seats:
 			count=0
@@ -160,12 +165,15 @@ class seatAllocator(database):
 					bookingResult=database.addBookedSeatsRecord(row,seat,name)
 					if bookingResult==1:
 						count+=1
-						print("Seat {}{} booked successfully for {}".format(name,row,seat))
 					else:
 						print("Error in booking of seats")
+			#update the maximum available seats in a row
+			self.maxSeatsInARow=database.getMaxAvailableSeats()
+			print("{} seat(s) booked successfully for {}".format(numberOfSeats,name))
 
 	def bookSeats(self,numberOfSeats,name):
 		
+		print("Attempting to book {} seats for {}".format(numberOfSeats,name))
 		#get total seats remaining
 		remainingSeats=database.getRemainingSeats()
 		seats=[]
@@ -173,30 +181,28 @@ class seatAllocator(database):
 		if(numberOfSeats<remainingSeats):
 			
 			#check if passengers can be accomodated in a single row
-			if(numberOfSeats<=self.columns):
+			if(numberOfSeats<=self.maxSeatsInARow):
 				bookedRow=database.getEmptyRowBySeats(numberOfSeats)
 				if(bookedRow==-1):
 					print("No seats available")
 				else:
-					print("Seats can be booked in row: {}".format(bookedRow))
-
 					self.bookSeatsInARow(bookedRow,numberOfSeats,name)
 
 			else:
 				# do modulus, break down seats according to columns
-				numberOfRows=numberOfSeats//self.columns
-				extraSeats=numberOfSeats%self.columns
+				numberOfRows=numberOfSeats//self.maxSeatsInARow
+				extraSeats=numberOfSeats%self.maxSeatsInARow
 				print("Booking {} + {} seats".format(numberOfRows,extraSeats))
 				for i in range(0,numberOfRows):
-					bookedRow=database.getEmptyRowBySeats(self.columns)
+					bookedRow=database.getEmptyRowBySeats(self.maxSeatsInARow)
 					if(bookedRow==-1):
 						print("No seats available")
 					else:
-						print("Seats can be booked in row {}".format(bookedRow))
-						self.bookSeatsInARow(bookedRow,self.columns,name)
+						self.bookSeatsInARow(bookedRow,self.maxSeatsInARow,name)
 
-				bookedRow=database.getEmptyRowBySeats(extraSeats)
-				self.bookSeatsInARow(bookedRow,extraSeats,name)
+				if extraSeats>0:
+					bookedRow=database.getEmptyRowBySeats(extraSeats)
+					self.bookSeatsInARow(bookedRow,extraSeats,name)
 
 		else:
 			print("Not enough seats available. Remaining seats are {}".format(remainingSeats))
@@ -219,13 +225,15 @@ totalEmptySeats=database.getRemainingSeats()
 print('remaining seats: {}'.format(totalEmptySeats))
 
 
-booking.bookSeats(1,'James')
+
 
 #database.getEmptyRowBySeats(3)
 
 
 
-#readCSV=readCSV('bookings.csv')
-#readCSV.readFile()
+readCSV=readCSV('bookings1.csv')
+readCSV.readFile()
 
-
+for row in readCSV.bookingData:
+	booking.bookSeats(int(row[1]),row[0])
+	
