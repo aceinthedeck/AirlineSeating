@@ -50,8 +50,12 @@ class database(object):
 
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
-		c.execute('select count(seat)from seating where name="" group by row order by count(seat) desc')
-		maxSeatsInARow=c.fetchone()[0]
+		remainingSeats=self.getRemainingSeats()
+		if(remainingSeats>0):
+			c.execute('select count(seat)from seating where name="" group by row order by count(seat) desc')
+			maxSeatsInARow=c.fetchone()[0]
+		else:
+			maxSeatsInARow=0
 		print("Maximum available seats {}".format(maxSeatsInARow))
 		return maxSeatsInARow
 
@@ -127,6 +131,60 @@ class database(object):
 			print(er.message)
 			conn.close()
 
+
+	def getRefusedBookings(self):
+		conn=sqlite3.connect(self.fileName)
+		c=conn.cursor()
+		cmd='Select passengers_refused from metrics'
+		try:
+			c.execute(cmd)
+			refusedBookings=c.fetchone()[0]
+			conn.close()
+		except sqlite3.Error as er:
+			print(er.message)
+			conn.close()
+
+
+	def updateRefusedBookings(self,refusedBookings):
+		conn=sqlite3.connect(self.fileName)
+		c=conn.cursor()
+		cmd='Update metrics set passengers_refused=passengers_refused+(?)'
+		try:
+			c.execute(cmd,(refusedBookings,))
+			conn.commit()
+			rowsCount=c.rowcount
+			if rowsCount>0:
+				conn.close()
+				return rowsCount
+			else:
+				print("error in updating refused bookings")
+				conn.close()
+				return -1
+		except sqlite3.Error as er:
+			print(er.message)
+			conn.close()
+
+
+	def updateSeperatedBookings(self,seperatedBookings):
+		conn=sqlite3.connect(self.fileName)
+		c=conn.cursor()
+		cmd='Update metrics set passengers_separated=passengers_separated+(?)'
+		try:
+			c.execute(cmd,(refusedBookings,))
+			conn.commit()
+			rowsCount=c.rowcount
+			if rowsCount>0:
+				conn.close()
+				return rowsCount
+			else:
+				print("error in updating refused bookings")
+				conn.close()
+				return -1
+		except sqlite3.Error as er:
+			print(er.message)
+			conn.close()
+
+
 class seatAllocator(database):
 
 	def __init__(self,rows,columns,dbName):
@@ -178,7 +236,7 @@ class seatAllocator(database):
 		remainingSeats=database.getRemainingSeats()
 		seats=[]
 		#check with remaining seats
-		if(numberOfSeats<remainingSeats):
+		if(numberOfSeats<=remainingSeats):
 			
 			#check if passengers can be accomodated in a single row
 			if(numberOfSeats<=self.maxSeatsInARow):
@@ -193,6 +251,7 @@ class seatAllocator(database):
 				numberOfRows=numberOfSeats//self.maxSeatsInARow
 				extraSeats=numberOfSeats%self.maxSeatsInARow
 				print("Booking {} + {} seats".format(numberOfRows,extraSeats))
+				database.updateSeperatedBookings(numberOfSeats)
 				for i in range(0,numberOfRows):
 					bookedRow=database.getEmptyRowBySeats(self.maxSeatsInARow)
 					if(bookedRow==-1):
@@ -207,6 +266,7 @@ class seatAllocator(database):
 		else:
 			print("Not enough seats available. Remaining seats are {}".format(remainingSeats))
 			self.bookingsRefused+=numberOfSeats
+			database.updateRefusedBookings(numberOfSeats)
 			print("booking refused till now {}".format(self.bookingsRefused))
 		
 
@@ -231,7 +291,7 @@ print('remaining seats: {}'.format(totalEmptySeats))
 
 
 
-readCSV=readCSV('bookings.csv')
+readCSV=readCSV('bookings1.csv')
 readCSV.readFile()
 
 for row in readCSV.bookingData:
