@@ -81,7 +81,19 @@ class database(object):
 		except:
 			print("Error in connecting to database")
 		return emptySeats
- 
+
+	#resets the metrics table in the database
+	def cleanUp(self):
+		conn=sqlite3.connect(self.fileName)
+		c=conn.cursor()
+		cmd='update metrics set passengers_refused=0, passengers_separated=0'
+		try:
+			c.execute(cmd)
+			conn.commit()
+		except sqlite3.Error as er:
+			print(er.message)
+			conn.close()
+
 	#return the list of rows having empty seats more than required sets
 	def getEmptyRowBySeats(self,requiredSeats):
 		conn=sqlite3.connect(self.fileName)
@@ -279,6 +291,9 @@ database=database(dbName)
 rows=database.getRows()
 cols=database.getColumns()
 
+
+#reset metrics taable
+database.cleanUp()
 
 booking=seatAllocator(rows,cols,dbName)
 booking.seatChars=database.seatChars
