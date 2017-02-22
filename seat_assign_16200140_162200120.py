@@ -11,10 +11,13 @@ class readCSV(object):
 
 	#reads csv file into bookingData variable
 	def readFile(self):
-		with open(self.fileName) as f:
-			reader=csv.reader(f)
-			for row in reader:
-				self.bookingData.append(row)
+		try:
+			with open(self.fileName) as f:
+				reader=csv.reader(f)
+				for row in reader:
+					self.bookingData.append(row)
+		except:
+			print("Unable to open the file containing booking data.")
 
 
 class database(object):
