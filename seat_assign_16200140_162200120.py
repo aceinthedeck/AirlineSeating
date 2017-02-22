@@ -303,13 +303,6 @@ booking.printInfo()
 totalEmptySeats=database.getRemainingSeats()
 print('remaining seats: {}'.format(totalEmptySeats))
 
-
-
-
-#database.getEmptyRowBySeats(3)
-
-
-
 readCSV=readCSV('booking_1.csv')
 readCSV.readFile()
 
