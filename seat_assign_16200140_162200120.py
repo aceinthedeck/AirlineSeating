@@ -11,7 +11,7 @@ class readCSV(object):
 
 	#reads csv file into bookingData variable
 	def readFile(self):
-		with open(self.fileName,'rb') as f:
+		with open(self.fileName) as f:
 			reader=csv.reader(f)
 			for row in reader:
 				self.bookingData.append(row)
@@ -45,7 +45,7 @@ class database(object):
 		conn.close()
 		return count
 
-
+	#get maximum available seats by each row
 	def getMaxAvailableSeats(self):
 
 		conn=sqlite3.connect(self.fileName)
@@ -59,8 +59,7 @@ class database(object):
 		print("Maximum available seats {}".format(maxSeatsInARow))
 		return maxSeatsInARow
 
-	#returns the remaining seats
-
+	#returns the absolute number of remaining seats
 	def getRemainingSeats(self):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
@@ -71,14 +70,16 @@ class database(object):
 		return totalEmptySeats
 
 	#returns the number of empty seats in a row
-	#to do try catch
 	def getEmptySeatsInRow(self, rowNumber):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
 		cmd='Select count(seat) from seating where row=(?) and name=""'
-		c.execute(cmd,(rowNumber,))
-		emptySeats=c.fetchone()[0]
-		conn.close()
+		try:
+			c.execute(cmd,(rowNumber,))
+			emptySeats=c.fetchone()[0]
+			conn.close()
+		except:
+			print("Error in connecting to database")
 		return emptySeats
  
 	#return the list of rows having empty seats more than required sets
@@ -131,7 +132,7 @@ class database(object):
 			print(er.message)
 			conn.close()
 
-
+	#get the number of refused bookings from the database
 	def getRefusedBookings(self):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
@@ -144,7 +145,7 @@ class database(object):
 			print(er.message)
 			conn.close()
 
-
+	#update the number of refused bookings in the database
 	def updateRefusedBookings(self,refusedBookings):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
@@ -164,7 +165,7 @@ class database(object):
 			print(er.message)
 			conn.close()
 
-
+	#update the number of seperated passengers
 	def updateSeperatedBookings(self,seperatedBookings):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
@@ -207,6 +208,7 @@ class seatAllocator(database):
 		print("Number of columns: {}".format(self.columns))
 		print("Number of seats in a row: {}".format(self.seatsInRow))
 
+	#checks if seats are available
 	def checkSeats(self,requestedSeats):
 		if(self.seatsAvailable<requestedSeats):
 			print("Seats not available")
@@ -214,6 +216,7 @@ class seatAllocator(database):
 			print("Total bookings refused till now {}".format(self.bookingsRefused))
 
 
+	#books seats in a single row
 	def bookSeatsInARow(self,row,numberOfSeats,name):
 		seats=database.getEmptySeatsArray(row)
 		if seats:
@@ -229,6 +232,7 @@ class seatAllocator(database):
 			self.maxSeatsInARow=database.getMaxAvailableSeats()
 			print("{} seat(s) booked successfully for {}".format(numberOfSeats,name))
 
+	#book the seats
 	def bookSeats(self,numberOfSeats,name):
 		
 		print("Attempting to book {} seats for {}".format(numberOfSeats,name))
