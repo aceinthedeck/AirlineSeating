@@ -171,7 +171,7 @@ class database(object):
 		c=conn.cursor()
 		cmd='Update metrics set passengers_separated=passengers_separated+(?)'
 		try:
-			c.execute(cmd,(refusedBookings,))
+			c.execute(cmd,(seperatedBookings,))
 			conn.commit()
 			rowsCount=c.rowcount
 			if rowsCount>0:
@@ -295,7 +295,7 @@ print('remaining seats: {}'.format(totalEmptySeats))
 
 
 
-readCSV=readCSV('bookings1.csv')
+readCSV=readCSV('booking_1.csv')
 readCSV.readFile()
 
 for row in readCSV.bookingData:
