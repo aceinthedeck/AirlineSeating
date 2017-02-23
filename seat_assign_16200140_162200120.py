@@ -30,23 +30,34 @@ class database(object):
 	def getRows(self):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
-		c.execute('Select nrows from rows_cols')
-		rows = c.fetchone()[0]
-		conn.close()
-		return rows
+		try:
+			c.execute('Select nrows from rows_cols')
+			rows = c.fetchone()[0]
+			conn.close()
+			return rows
+		except sqlite3.Error as er:
+			print(er.message)
+			conn.close()
+			return -1
+
+			
 
 	#returns number of columns in the plane and get column codes for seats from the database
 	def getColumns(self):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
-		c.execute('Select seats from rows_cols')
-		cols = c.fetchone()[0]
-		count=0
-		for char in cols:
-			self.seatChars.append(char)
-			count=count+1
-		conn.close()
-		return count
+		try:
+			c.execute('Select seats from rows_cols')
+			cols = c.fetchone()[0]
+			count=0
+			for char in cols:
+				self.seatChars.append(char)
+				count=count+1
+			conn.close()
+			return count
+		except sqlite3.Error as er:
+			print(er.message)
+			return -1
 
 	#get maximum available seats by each row
 	def getMaxAvailableSeats(self):
@@ -55,8 +66,14 @@ class database(object):
 		c=conn.cursor()
 		remainingSeats=self.getRemainingSeats()
 		if(remainingSeats>0):
-			c.execute('select count(seat)from seating where name="" group by row order by count(seat) desc')
-			maxSeatsInARow=c.fetchone()[0]
+			try:
+				c.execute('select count(seat)from seating where name="" group by row order by count(seat) desc')
+				maxSeatsInARow=c.fetchone()[0]
+				conn.close()
+			except sqlite3.Error as er:
+				print(er.message)
+				conn.close()
+				maxSeatsInARow=0
 		else:
 			maxSeatsInARow=0
 		print("Maximum available seats {}".format(maxSeatsInARow))
@@ -102,13 +119,18 @@ class database(object):
 		conn=sqlite3.connect(self.fileName)
 		c=conn.cursor()
 		cmd='Select row,count(seat) as numOfSeats from seating  where name="" group by row  having numOfSeats>=(?)'
-		rowsCount=c.execute(cmd,(requiredSeats,))
-		if rowsCount>0:
-			rowNumber=c.fetchone()[0]
-		else:
-			rowNumber=-1
-		conn.close()
-		return rowNumber
+		try:
+			rowsCount=c.execute(cmd,(requiredSeats,))
+			if rowsCount>0:
+				rowNumber=c.fetchone()[0]
+			else:
+				rowNumber=-1
+			conn.close()
+			return rowNumber
+		except sqlite3.Error as er:
+			print(er.message)
+			conn.close()
+			return -1
 
 	#return the array of seats available by row
 	def getEmptySeatsArray(self,row):
@@ -265,8 +287,8 @@ class seatAllocator(database):
 				else:
 					self.bookSeatsInARow(bookedRow,numberOfSeats,name)
 
+			# else divide the seats and book in seperate rows
 			else:
-				# do modulus, break down seats according to columns
 				numberOfRows=numberOfSeats//self.maxSeatsInARow
 				extraSeats=numberOfSeats%self.maxSeatsInARow
 				print("Booking {} + {} seats".format(numberOfRows,extraSeats))
@@ -290,6 +312,7 @@ class seatAllocator(database):
 		
 
 dbName='data.db'
+bookingsFile='booking_1.csv'
 database=database(dbName)
 rows=database.getRows()
 cols=database.getColumns()
@@ -306,7 +329,7 @@ booking.printInfo()
 totalEmptySeats=database.getRemainingSeats()
 print('remaining seats: {}'.format(totalEmptySeats))
 
-readCSV=readCSV('booking_1.csv')
+readCSV=readCSV(bookingsFile)
 readCSV.readFile()
 
 for row in readCSV.bookingData:
